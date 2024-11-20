@@ -50,28 +50,25 @@ type Resultados struct {
 	Informacion  Informacion  `json:"informacion"`
 	Webby        Webby        `json:"webby"`
 	ComResidente ComResidente `json:"comresidente"`
+	SenAcum      SenAcum      `json:"senacum"`
 }
 type Webby struct {
 	UrlG string `json:"urlg"`
 	UrlC string `json:"urlc"`
+	UrlS string `json:"urls"`
 }
 
 type Gobernador struct {
 	Jenniffervotes   int     `json:"jenniffervotes"`
 	Jennifferpercent float64 `json:"jennifferpercent"`
-	// 21 and 22 respectively
-	Jesusvotes   int     `json:"jesusvotes"`
-	Jesuspercent float64 `json:"jesuspercent"`
-	//26 and 27 respectively
-	JavierCvotes   int     `json:"javiervotes"`
-	JavierCpercent float64 `json:"javierpercent"`
-	//31 and 32 respectively
-	Juanvotes   int     `json:"juanvotes"`
-	Juanpercent float64 `json:"juanpercent"`
-	//35 and 36 respectively
-	JavierJvotes   int     `json:"javier2votes"`
-	JavierJpercent float64 `json:"javier2percent"`
-	//40 and 41 respectively
+	Jesusvotes       int     `json:"jesusvotes"`
+	Jesuspercent     float64 `json:"jesuspercent"`
+	JavierCvotes     int     `json:"javiervotes"`
+	JavierCpercent   float64 `json:"javierpercent"`
+	Juanvotes        int     `json:"juanvotes"`
+	Juanpercent      float64 `json:"juanpercent"`
+	JavierJvotes     int     `json:"javier2votes"`
+	JavierJpercent   float64 `json:"javier2percent"`
 }
 type Informacion struct {
 	Participacion float64 `json:"participacion"`
@@ -91,19 +88,32 @@ type Informacion struct {
 type ComResidente struct {
 	Williamvotes   int     `json:"williamvotes"`
 	Williampercent float64 `json:"williampercent"`
-	//22 and 23
-	Pablovotes   int     `json:"pablovotes"`
-	Pablopercent float64 `json:"pablopercent"`
-	//28 and 29
-	anaVotes   int     `json:"anavotes"`
-	AnaPercent float64 `json:"anapercent"`
-	//34 and 35
+	Pablovotes     int     `json:"pablovotes"`
+	Pablopercent   float64 `json:"pablopercent"`
+	anaVotes       int     `json:"anavotes"`
+	AnaPercent     float64 `json:"anapercent"`
 	robertoVotes   int     `json:"robertovotes"`
 	RobertoPercent float64 `json:"robertopercent"`
-	//40 and 41
 	vivianaVotes   int     `json:"vivianavotes"`
 	VivianaPercent float64 `json:"vivianapercent"`
-	//45 and 46
+}
+
+type SenAcum struct {
+	mariavotes      int `json:"mariavotes"`
+	leydavotes      int `json:"leydavotes"`
+	motorizadavotes int `json:"motorizadavotes"`
+	huevovotes      int `json:"huevovotes"`
+	vidotvotes      int `json:"vidotvotes"`
+	luisjavvotes    int `json:"luisjavvotes"`
+	joannevotes     int `json:"joannevotes"`
+	josesanvotes    int `json:"josesanvotes"`
+	tilapiavotes    int `json:"tilapiavotes"`
+	adavotes        int `json:"adavotes"`
+	elizabethvotes  int `json:"elizabethvotes"`
+	angelvotes      int `json:"angelvotes"`
+	kerenvotes      int `json:"kerenvotes"`
+	nelsonvotes     int `json:"nelsonvotes"`
+	nominacionvotes int `json:"nominacionvotes"`
 }
 
 var resultados Resultados
@@ -313,12 +323,26 @@ func Task(proxy ProxyStruct, errch chan error) {
 
 		}
 	}(page2)
+	page3, err := browser.NewPage()
+	if err != nil {
+		log.Panicf("could not create second page: %v", err)
+	}
+	defer func(page2 playwright.Page, options ...playwright.PageCloseOptions) {
+		err = page2.Close()
+		if err != nil {
+			log.Panicf("could not close page: %v", err)
+
+		}
+	}(page2)
 	log.Println("navigating to page")
-	if _, err = page.Goto("https://elecciones2024.ceepur.org/Noche_del_Evento_120/index.html#es/default/GOBERNADOR_Resumen.xml"); err != nil {
+	if _, err = page.Goto("https://elecciones2024.ceepur.org/Escrutinio_General_121/index.html#es/default/GOBERNADOR_Resumen.xml"); err != nil {
 		log.Panicf("could not navigate to page: %v", err)
 
 	}
-	if _, err = page2.Goto("https://elecciones2024.ceepur.org/Noche_del_Evento_120/index.html#es/default/COMISIONADO_RESIDENTE_Resumen.xml"); err != nil {
+	if _, err = page2.Goto("https://elecciones2024.ceepur.org/Escrutinio_General_121/index.html#es/default/COMISIONADO_RESIDENTE_Resumen.xml"); err != nil {
+		log.Panicf("could not navigate to page: %v", err)
+	}
+	if _, err = page3.Goto("https://elecciones2024.ceepur.org/Escrutinio_General_121/index.html#es/pic_bar_list/SENADORES_POR_ACUMULACION_Resumen.xml"); err != nil {
 		log.Panicf("could not navigate to page: %v", err)
 	}
 	err = page.WaitForLoadState(playwright.PageWaitForLoadStateOptions{
@@ -340,9 +364,20 @@ func Task(proxy ProxyStruct, errch chan error) {
 
 	// Split the cleaned string into slices
 	slices := strings.Fields(cleanedText)
+	var val int
+	for i := 0; i < len(slices); i++ {
+		if slices[i] == "TOTAL" && slices[i+1] == "DE" && slices[i+2] == "PAPELETAS" {
+			val, err = parseInt(slices[i+3])
+			if err != nil {
+				log.Panicf("Error converting votes: %v", err)
+			}
+			break
+		}
+		// Ensure there are enough
+	}
 
-	val, err := parseInt(slices[74])
 	if resultados.Informacion.TotalDePapeletas < val {
+		//wait for com residente page
 		err = page2.WaitForLoadState(playwright.PageWaitForLoadStateOptions{
 			State: playwright.LoadStateNetworkidle,
 		})
@@ -355,17 +390,38 @@ func Task(proxy ProxyStruct, errch chan error) {
 		}
 		cleanedText2 := re.ReplaceAllString(content2, " ")
 		slices2 := strings.Fields(cleanedText2)
+		//wait and slice senador por acumulacion
+		err = page3.WaitForLoadState(playwright.PageWaitForLoadStateOptions{
+			State: playwright.LoadStateNetworkidle,
+		})
+		if err != nil {
+			log.Printf("network idle state not reached: %v", err)
+		}
+		content3, err := page3.InnerText("section.content")
+		if err != nil {
+			log.Panicf("could not get innerHTML: %v", err)
+		}
+		cleanedText3 := re.ReplaceAllString(content3, " ")
+		slices3 := strings.Fields(cleanedText3)
 
 		resultados.Informacion.TotalDePapeletas = val
-		resultados.Informacion.Participacion, err = parsePercentage(slices[76])
-		log.Println(resultados.Informacion.Participacion)
-		resultados.Informacion.NominacionDirecta, err = parseInt(slices[51])
-		resultados.Informacion.ColegiosReportados, err = parseInt(slices[124])
-		resultados.Informacion.ColegiosRegulares, err = parseInt(slices[132])
-		resultados.Informacion.ColegiosDeVotoAdelantado, err = parseInt(slices[144])
+		//resultados.Informacion.Participacion, err = parsePercentage(slices[76])
+		//log.Println(resultados.Informacion.Participacion)
+		//resultados.Informacion.NominacionDirecta, err = parseInt(slices[51])
+		//resultados.Informacion.ColegiosReportados, err = parseInt(slices[124])
+		//resultados.Informacion.ColegiosRegulares, err = parseInt(slices[132])
+		//resultados.Informacion.ColegiosDeVotoAdelantado, err = parseInt(slices[144])
 		/*
 
 		 */
+		for i := 0; i < len(slices); i++ {
+			if slices[i] == "COLEGIOS" && slices[i+1] == "REPORTADOS" {
+				resultados.Informacion.ColegiosReportados, err = parseInt(slices[i+2])
+			} else if slices[i] == "COLEGIOS" && slices[i+3] == "ADELTANTADO" {
+				resultados.Informacion.ColegiosDeVotoAdelantado, err = parseInt(slices[i+6])
+			}
+			// Ensure there are enough
+		}
 		for i := 0; i < len(slices); i++ {
 			if slices[i] == "González" {
 				// Ensure there are enough slices after "Gonzales"
@@ -449,7 +505,7 @@ func Task(proxy ProxyStruct, errch chan error) {
 					log.Panicf("Not enough data after 'Gonzales'")
 				}
 			}
-		} //comisionado
+		} //gob
 		for i := 0; i < len(slices2); i++ {
 			if slices2[i] == "Villafañe" {
 				// Ensure there are enough slices after "Gonzales"
@@ -533,7 +589,153 @@ func Task(proxy ProxyStruct, errch chan error) {
 					log.Panicf("Not enough data after 'Gonzales'")
 				}
 			}
+		} //comresidente
+		for i := 0; i < len(slices3); i++ {
+			if slices3[i] == "Lourdes" {
+				if i+3 < len(slices3) {
+					resultados.SenAcum.mariavotes, err = parseInt(slices3[i+3])
+					if err != nil {
+						log.Panicf("Error converting votes: %v", err)
+					}
+				} else {
+					log.Panicf("Not enough data after 'Lourdes'")
+				}
+			} else if slices3[i] == "Leyda" {
+				if i+3 < len(slices3) {
+					resultados.SenAcum.leydavotes, err = parseInt(slices3[i+3])
+					if err != nil {
+						log.Panicf("Error converting votes: %v", err)
+					}
+				} else {
+					log.Panicf("Not enough data after 'Leyda'")
+				}
+			} else if slices3[i] == "Aguilú" {
+				if i+2 < len(slices3) {
+					resultados.SenAcum.motorizadavotes, err = parseInt(slices3[i+2])
+					if err != nil {
+						log.Panicf("Error converting votes: %v", err)
+					}
+				} else {
+					log.Panicf("Not enough data after 'Aguilú'")
+				}
+			} else if slices3[i] == "Vidot" {
+				if i+2 < len(slices3) {
+					resultados.SenAcum.vidotvotes, err = parseInt(slices3[i+2])
+					if err != nil {
+						log.Panicf("Error converting votes: %v", err)
+					}
+				} else {
+					log.Panicf("Not enough data after 'Vidot'")
+				}
+			} else if slices3[i] == "Rosario" {
+				if i+2 < len(slices3) {
+					resultados.SenAcum.huevovotes, err = parseInt(slices3[i+2])
+					if err != nil {
+						log.Panicf("Error converting votes: %v", err)
+					}
+				} else {
+					log.Panicf("Not enough data after 'Rosario'")
+				}
+			} else if slices3[i] == "(Javy)" {
+				if i+3 < len(slices3) {
+					resultados.SenAcum.luisjavvotes, err = parseInt(slices3[i+3])
+					if err != nil {
+						log.Panicf("Error converting votes: %v", err)
+					}
+				} else {
+					log.Panicf("Not enough data after '(Javy))'")
+				}
+			} else if slices3[i] == "Joanne" {
+				if i+4 < len(slices3) {
+					resultados.SenAcum.joannevotes, err = parseInt(slices3[i+4])
+					if err != nil {
+						log.Panicf("Error converting votes: %v", err)
+					}
+				} else {
+					log.Panicf("Not enough data after 'Joanne'")
+				}
+			} else if slices3[i] == "Dalmau" {
+				if i+3 < len(slices3) {
+					resultados.SenAcum.josesanvotes, err = parseInt(slices3[i+3])
+					if err != nil {
+						log.Panicf("Error converting votes: %v", err)
+					}
+				} else {
+					log.Panicf("Not enough data after 'Dalmau'")
+				}
+			} else if slices3[i] == "(Josian)" {
+				if i+3 < len(slices3) {
+					resultados.SenAcum.josesanvotes, err = parseInt(slices3[i+3])
+					if err != nil {
+						log.Panicf("Error converting votes: %v", err)
+					}
+				}
+			} else if slices3[i] == "Schatz" {
+				if i+2 < len(slices3) {
+					resultados.SenAcum.tilapiavotes, err = parseInt(slices3[i+2])
+					if err != nil {
+						log.Panicf("Error converting votes: %v", err)
+					}
+				} else {
+					log.Panicf("Not enough data after 'Schatz'")
+				}
+			} else if slices3[i] == "Conde" {
+				if i+2 < len(slices3) {
+					resultados.SenAcum.adavotes, err = parseInt(slices3[i+2])
+					if err != nil {
+						log.Panicf("Error converting votes: %v", err)
+					}
+				} else {
+					log.Panicf("Not enough data after 'Conde'")
+				}
+			} else if slices3[i] == "Elizabeth" {
+				if i+3 < len(slices3) {
+					resultados.SenAcum.elizabethvotes, err = parseInt(slices3[i+3])
+					if err != nil {
+						log.Panicf("Error converting votes: %v", err)
+					}
+				} else {
+					log.Panicf("Not enough data after 'Elizabeth'")
+				}
+			} else if slices3[i] == "Toledo" {
+				if i+3 < len(slices3) {
+					resultados.SenAcum.angelvotes, err = parseInt(slices3[i+3])
+					if err != nil {
+						log.Panicf("Error converting votes: %v", err)
+					}
+				} else {
+					log.Panicf("Not enough data after 'Toledo'")
+				}
+			} else if slices3[i] == "Riquelme" {
+				if i+2 < len(slices3) {
+					resultados.SenAcum.kerenvotes, err = parseInt(slices3[i+2])
+					if err != nil {
+						log.Panicf("Error converting votes: %v", err)
+					}
+				} else {
+					log.Panicf("Not enough data after 'Riquelme'")
+				}
+			} else if slices3[i] == "Albino" {
+				if i+2 < len(slices3) {
+					resultados.SenAcum.nelsonvotes, err = parseInt(slices3[i+2])
+					if err != nil {
+						log.Panicf("Error converting votes: %v", err)
+					}
+				} else {
+					log.Panicf("Not enough data after 'Albino'")
+				}
+			} else if slices3[i] == "NOMINACIÓN" {
+				if i+2 < len(slices3) {
+					resultados.SenAcum.nominacionvotes, err = parseInt(slices3[i+2])
+					if err != nil {
+						log.Panicf("Error converting votes: %v", err)
+					}
+				} else {
+					log.Panicf("Not enough data after 'Nominación'")
+				}
+			}
 		}
+
 		log.Println(resultados)
 		file, err := os.OpenFile("data.json", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
 		if err != nil {
@@ -547,6 +749,7 @@ func Task(proxy ProxyStruct, errch chan error) {
 		file.Close()
 		webhookGob(resultados)
 		webhookCom(resultados)
+		webhookSen(resultados)
 	}
 	log.Printf("finished task for proxy :%v", proxy.ip)
 	errch <- nil
@@ -702,5 +905,128 @@ func webhookCom(strct Resultados) {
 
 	if resp.StatusCode != http.StatusOK {
 		log.Printf("Webhook returned non-OK status: %v", resp.Status)
+	}
+}
+
+func webhookSen(strct Resultados) {
+	payload := map[string]interface{}{
+		"content": "Results so far",
+		"embeds": []map[string]interface{}{
+			{
+				"title":       "Maria De Lourdes",
+				"description": fmt.Sprintf("Votos: %d\n", strct.SenAcum.mariavotes),
+				"color":       301316,
+			},
+			{
+				"title":       "Leyda Cruz",
+				"description": fmt.Sprintf("Votos: %d\n", strct.SenAcum.leydavotes),
+				"color":       1652433,
+			},
+			{
+				"title":       "Abogada Motorizada",
+				"description": fmt.Sprintf("Votos: %d\n", strct.SenAcum.motorizadavotes),
+				"color":       1652433,
+			},
+			{
+				"title":       "Huevito Sancochado",
+				"description": fmt.Sprintf("Votos: %d\n", strct.SenAcum.huevovotes),
+				"color":       1652433,
+			},
+			{
+				"title":       "Jose A. Vargas Vidot",
+				"description": fmt.Sprintf("Votos: %d\n", strct.SenAcum.vidotvotes),
+				"color":       nil,
+			},
+			{
+				"title":       "Luis (Javy) Hernandez",
+				"description": fmt.Sprintf("Votos: %d\n", strct.SenAcum.luisjavvotes),
+				"color":       13568008,
+			},
+			{
+				"title":       "Jose Dalmau Santiago",
+				"description": fmt.Sprintf("Votos: %d\n", strct.SenAcum.josesanvotes),
+				"color":       13568008,
+			},
+			{
+				"title":       "Joanne Rodriguez Veve",
+				"description": fmt.Sprintf("Votos: %d\n", strct.SenAcum.joannevotes),
+				"color":       1349560,
+			},
+		},
+		"attachments": []interface{}{},
+	}
+
+	payload2 := map[string]interface{}{
+		"content": "Results so far",
+		"embeds": []map[string]interface{}{
+			{
+				"title":       "Jose Josian Santiago",
+				"description": fmt.Sprintf("Votos: %d\n", strct.SenAcum.josesanvotes),
+				"color":       13568008,
+			},
+			{
+				"title":       "Tilapia",
+				"description": fmt.Sprintf("Votos: %d\n", strct.SenAcum.tilapiavotes),
+				"color":       1652433,
+			},
+			{
+				"title":       "Ada Conde",
+				"description": fmt.Sprintf("Votos: %d\n", strct.SenAcum.adavotes),
+				"color":       13568008,
+			},
+			{
+				"title":       "Elizabeth Torres",
+				"description": fmt.Sprintf("Votos: %d\n", strct.SenAcum.elizabethvotes),
+				"color":       nil,
+			},
+			{
+				"title":       "Angel Toledo",
+				"description": fmt.Sprintf("Votos: %d\n", strct.SenAcum.angelvotes),
+				"color":       1652433,
+			},
+			{
+				"title":       "Keren Riquelme",
+				"description": fmt.Sprintf("Votos: %d\n", strct.SenAcum.kerenvotes),
+				"color":       1652433,
+			},
+			{
+				"title":       "Nelson Albino Racista",
+				"description": fmt.Sprintf("Votos: %d\n", strct.SenAcum.nelsonvotes),
+				"color":       nil,
+			},
+			{
+				"title":       "EL senador del pueblo (y bernabe)\nNominacion Directa",
+				"description": fmt.Sprintf("Votos: %d\n", strct.SenAcum.nominacionvotes),
+				"color":       0,
+			},
+		},
+		"attachments": []interface{}{},
+	}
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		log.Panicf("Error marshalling payload: %v", err)
+	}
+	payload2Bytes, err := json.Marshal(payload2)
+	if err != nil {
+		log.Panicf("Error marshalling payload: %v", err)
+	}
+	url := resultados.Webby.UrlS
+
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(payloadBytes))
+	if err != nil {
+		log.Panicf("Error sending webhook: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		log.Printf("Webhook returned non-OK status: %v", resp.Status)
+	}
+	resp2, err := http.Post(url, "application/json", bytes.NewBuffer(payload2Bytes))
+	if err != nil {
+		log.Panicf("Error sending webhook: %v", err)
+	}
+	defer resp2.Body.Close()
+	if resp2.StatusCode != http.StatusOK {
+		log.Printf("Webhook returned non-OK status: %v", resp2.Status)
 	}
 }

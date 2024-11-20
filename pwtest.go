@@ -31,7 +31,7 @@ func main() {
 	}
 	defer page.Close()
 
-	_, err = page.Goto("https://elecciones2024.ceepur.org/Noche_del_Evento_120/index.html#es/default/GOBERNADOR_Resumen.xml")
+	_, err = page.Goto("https://elecciones2024.ceepur.org/Escrutinio_General_121/index.html#es/pic_bar_list/SENADORES_POR_ACUMULACION_Resumen.xml")
 	if err != nil {
 		log.Fatalf("could not navigate to page: %v", err)
 	}

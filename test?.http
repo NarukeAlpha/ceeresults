@@ -1,0 +1,8 @@
+### GET request to example server
+GET https://elecciones2024.ceepur.org/Escrutinio_General_121/data/SENADORES_POR_ACUMULACION_Resumen.xml
+User-Agent: 
+Accept: */*
+Accept-Encoding: gzip, deflate, br, zstd
+Accept-Language: en-US,en;q=0.9
+
+###
